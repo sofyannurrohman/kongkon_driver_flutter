@@ -11,26 +11,19 @@ class Order {
           .get(Uri.parse('http://localhost:3333/api/v1/orders/$orderId'));
 
       if (response.statusCode == 200) {
-        // Decode the response body
         final responseData = jsonDecode(response.body);
-
-        // Log the response to inspect its structure
-
-        // Check if the response contains the 'data' and 'order' keys
         if (responseData['status'] == 'success' &&
             responseData['data'] != null) {
           final order = responseData['data']['order'];
 
-          // Extract customer_id and merchant_id from the order data
           final customerId = order['customer_id'];
           final merchantId = order['merchant_id'];
-          // If customerId or merchantId is null, handle the error or return early
           if (customerId == null || merchantId == null) {
             throw Exception('Missing user or merchant ID in the order data.');
           }
 
-          return order; // Return the order data if everything is fine
-        } else {
+          return order;
+          } else {
           throw Exception('Invalid response format');
         }
       } else {
@@ -88,8 +81,7 @@ class Order {
     print(response.body);
       if (response.statusCode == 201) {
         // Successfully updated status
-        return; // No need to throw an exception here, handle success in the UI
-      } else {
+        return; } else {
         throw Exception('Failed to update status');
       }
     } catch (e) {
@@ -103,14 +95,9 @@ Future<void> markOrderCompleted(String orderId) async {
   );
 
   if (response.statusCode == 201) {
-    // Successfully marked as completed
-
-    // Step 1: Remove the order ID from SharedPreferences
     final prefs = await SharedPreferences.getInstance();
-    prefs.remove('currentOrderId'); // Remove saved order ID from SharedPreferences
-
+    prefs.remove('currentOrderId');
   } else {
-    // If the request fails, handle the error
     throw Exception('Failed to complete the order');
   }
 }
