@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:kongkon_app_driver/api/order_api.dart';
+import 'package:kongkon_app_driver/shared/theme.dart';
 
 class OrderDetailPage extends StatefulWidget {
   final String orderId;
@@ -85,18 +86,18 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     try {
       await orderApi.updateStatus(widget.orderId, selectedStatus);
 
-     if (selectedStatus == 'Order has been sent to customer') {
-      await orderApi.markOrderCompleted(widget.orderId);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Order completed successfully!')),
-      );
+      if (selectedStatus == 'Order has been sent to customer') {
+        await orderApi.markOrderCompleted(widget.orderId);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Order completed successfully!')),
+        );
 
-      Navigator.pushReplacementNamed(context, '/dashboard');
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Status updated successfully!')),
-      );
-    }
+        Navigator.pushReplacementNamed(context, '/dashboard');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Status updated successfully!')),
+        );
+      }
     } catch (e) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -164,63 +165,107 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                         ),
                         Padding(
                           padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Row(
                             children: [
-                              Text(
-                                'Order ID: ${orderDetails?['id']}',
-                                style: const TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 5),
-                              Text(
-                                'Customer: \$${userDetails?['name']}',
-                                style: const TextStyle(fontSize: 14),
-                              ),
-                              const SizedBox(height: 5),
-                              Text(
-                                'Total Amount: \$${orderDetails?['total_amount']}',
-                                style: const TextStyle(fontSize: 14),
-                              ),
-                              const SizedBox(height: 5),
-                              Text(
-                                'Status: ${orderDetails?['status']}',
-                                style: const TextStyle(fontSize: 14),
-                              ),
-                              const SizedBox(height: 5),
-                              const Text('Select Status'),
-                              DropdownButton<String>(
-                                value: selectedStatus,
-                                onChanged: (String? newStatus) {
-                                  setState(() {
-                                    selectedStatus = newStatus!;
-                                  });
-                                },
-                                items: const [
-                                  DropdownMenuItem(
-                                    value: 'Pending',
-                                    child: Text('Pending'),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Order ID: ${orderDetails?['id']}',
+                                    style: blackTextStyle.copyWith(
+                                        fontSize: 14, fontWeight: medium),
                                   ),
-                                  DropdownMenuItem(
-                                    value: 'In Progress',
-                                    child: Text('In Progress'),
+                                  const SizedBox(height: 5),
+                                  Text(
+                                    'Nama Customer: ${userDetails?['name']}',
+                                    style: blackTextStyle.copyWith(
+                                        fontSize: 14, fontWeight: medium),
                                   ),
-                                  DropdownMenuItem(
-                                    value: 'Order has been sent to customer',
-                                    child:
-                                        Text('Order has been sent to customer'),
+                                  const SizedBox(height: 5),
+                                  Text(
+                                    style: blackTextStyle.copyWith(
+                                        fontSize: 14, fontWeight: medium),
+                                    'Total Pembayaran: Rp. ${orderDetails?['total_amount']}',
                                   ),
-                                  DropdownMenuItem(
-                                    value: 'Cancelled',
-                                    child: Text('Cancelled'),
+                                  const SizedBox(height: 5),
+                                  Text(
+                                    style: blackTextStyle.copyWith(
+                                        fontSize: 14, fontWeight: medium),
+                                    'Profit: Rp. ${orderDetails?['driver_profit']}',
+                                  ),
+                                  const SizedBox(height: 5),
+                                  Text(
+                                    'Status: ${orderDetails?['status']}',
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                  const SizedBox(height: 5),
+                                  const Text('Select Status'),
+                                  DropdownButton<String>(
+                                    value: selectedStatus,
+                                    onChanged: (String? newStatus) {
+                                      setState(() {
+                                        selectedStatus = newStatus!;
+                                      });
+                                    },
+                                    items: [
+                                      DropdownMenuItem(
+                                        value: 'Menuju merchant',
+                                        child: Text(
+                                            style: blackTextStyle.copyWith(
+                                                fontSize: 14,
+                                                fontWeight: medium),
+                                            'Menuju merchant'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'Pesanan sedang diantar ke tujuan',
+                                        child: Text(
+                                            style: blackTextStyle.copyWith(
+                                                fontSize: 14,
+                                                fontWeight: medium),
+                                            'Pesanan sedang diantar ke tujuan'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value:
+                                            'Pesanan sudah diterima customer',
+                                        child: Text(
+                                            style: blackTextStyle.copyWith(
+                                                fontSize: 14,
+                                                fontWeight: medium),
+                                            'Pesanan sudah diterima customer'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'Batalkan',
+                                        child: Text(
+                                            style: blackTextStyle.copyWith(
+                                                fontSize: 14,
+                                                fontWeight: medium),
+                                            'Batalkan'),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  ElevatedButton(
+                                    onPressed: updateStatus,
+                                    child: const Text('Update Status'),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 10),
-                              ElevatedButton(
-                                onPressed: updateStatus,
-                                child: const Text('Update Status'),
-                              ),
+                              Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Nama Merchant: ${merchantDetails?['name']}',
+                                      style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                    const SizedBox(height: 5),
+                                    Text(
+                                      'Alamat: \$${merchantDetails?['location']}',
+                                      style: const TextStyle(fontSize: 14),
+                                    ),
+                                    const SizedBox(height: 5),
+                                  ])
                             ],
                           ),
                         ),
