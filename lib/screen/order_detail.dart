@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:kongkon_app_driver/api/order_api.dart';
+import 'package:kongkon_app_driver/services/geocoding_service.dart';
 import 'package:kongkon_app_driver/shared/theme.dart';
+import 'package:provider/provider.dart';
 
 class OrderDetailPage extends StatefulWidget {
   final String orderId;
@@ -26,6 +28,8 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
 
   final Order orderApi = Order(); // Instantiate the Order API
 
+  String? merchant_address;
+  String? customer_address;
   @override
   void initState() {
     super.initState();
@@ -46,7 +50,9 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
       // Extract the user_id and merchant_id from the order
       final String? userId = orderDetails?['customer_id'];
       final String? merchantId = orderDetails?['merchant_id'];
-
+      if (userId == null || merchantId == null) {
+        throw Exception('User or Merchant ID is missing');
+      }
       if (userId != null && merchantId != null) {
         // Fetch user and merchant details if the ids are not null
         final userResponse = await orderApi.fetchUserDetails(userId);
@@ -64,10 +70,12 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
       // Extract coordinates for the map markers
       final fromCoordinates = orderDetails?['from_location']['coordinates'];
       final toCoordinates = orderDetails?['to_location']['coordinates'];
-
       setState(() {
         merchantLocation = LatLng(fromCoordinates[1], fromCoordinates[0]);
         customerLocation = LatLng(toCoordinates[1], toCoordinates[0]);
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _fetchAddress();
       });
     } catch (e) {
       setState(() {
@@ -75,6 +83,41 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
             e.toString(); // Show error message if something goes wrong
         isLoading = false;
       });
+    }
+  }
+
+  void _fetchAddress() {
+    if (orderDetails != null) {
+      final m_lat = orderDetails?['from_location']['coordinates'][1];
+      final m_long = orderDetails?['from_location']['coordinates'][0];
+      final c_lat = orderDetails?['to_location']['coordinates'][1];
+      final c_long = orderDetails?['to_location']['coordinates'][0];
+
+      final locationProvider =
+          Provider.of<LocationProvider>(context, listen: false);
+
+      locationProvider.fetchHumanReadableAddress(m_lat, m_long).then((_) {
+        if (locationProvider.address == null) {
+          print("Error: Address not found for the given coordinates.");
+        } else {
+          setState(() {
+            merchant_address = locationProvider.address;
+          });
+        }
+        print("Fetched Merchant address: $merchant_address");
+      }).catchError((err) {
+        print("Error fetching address: $err");
+      });
+      locationProvider.fetchHumanReadableAddress(c_lat, c_long).then((_) {
+        setState(() {
+          customer_address = locationProvider.address;
+        });
+        print("Fetched address: $customer_address");
+      }).catchError((err) {
+        print("Error fetching address: $err");
+      });
+    } else {
+      print("No saved order to fetch address for.");
     }
   }
 
@@ -86,7 +129,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     try {
       await orderApi.updateStatus(widget.orderId, selectedStatus);
 
-      if (selectedStatus == 'Order has been sent to customer') {
+      if (selectedStatus == 'completed') {
         await orderApi.markOrderCompleted(widget.orderId);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Order completed successfully!')),
@@ -112,7 +155,10 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Order Details'),
+        title: Text(
+          'Order Details ${orderDetails?['id']}',
+          style: blackTextStyle.copyWith(fontSize: 20, fontWeight: semibold),
+        ),
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -122,11 +168,9 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                   ? const Center(child: Text('Failed to load order details.'))
                   : Column(
                       children: [
-                        // Google Map wrapped in a responsive container
                         Container(
-                          height: MediaQuery.of(context).size.height *
-                              0.4, // 40% of the screen height
-                          width: double.infinity, // Full width of the container
+                          height: MediaQuery.of(context).size.height * 0.4,
+                          width: double.infinity,
                           child: GoogleMap(
                             onMapCreated: (controller) {
                               _mapController = controller;
@@ -163,109 +207,157 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                             },
                           ),
                         ),
-                        Padding(
+                        Container(
+                          width:
+                              400, // Makes the container fill the width of its parent
+                          height: 400,
+                          decoration: BoxDecoration(
+                            color: Colors
+                                .white, // Set your container background color here
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(
+                                  16.0), // Set the desired radius
+                              topRight: Radius.circular(16.0),
+                            ),
+                          ),
                           padding: const EdgeInsets.all(16.0),
-                          child: Row(
+                          child: Column(
                             children: [
-                              Column(
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment
+                                    .spaceEvenly, // Ensures equal spacing
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    'Order ID: ${orderDetails?['id']}',
-                                    style: blackTextStyle.copyWith(
-                                        fontSize: 14, fontWeight: medium),
-                                  ),
-                                  const SizedBox(height: 5),
-                                  Text(
-                                    'Nama Customer: ${userDetails?['name']}',
-                                    style: blackTextStyle.copyWith(
-                                        fontSize: 14, fontWeight: medium),
-                                  ),
-                                  const SizedBox(height: 5),
-                                  Text(
-                                    style: blackTextStyle.copyWith(
-                                        fontSize: 14, fontWeight: medium),
-                                    'Total Pembayaran: Rp. ${orderDetails?['total_amount']}',
-                                  ),
-                                  const SizedBox(height: 5),
-                                  Text(
-                                    style: blackTextStyle.copyWith(
-                                        fontSize: 14, fontWeight: medium),
-                                    'Profit: Rp. ${orderDetails?['driver_profit']}',
-                                  ),
-                                  const SizedBox(height: 5),
-                                  Text(
-                                    'Status: ${orderDetails?['status']}',
-                                    style: const TextStyle(fontSize: 14),
-                                  ),
-                                  const SizedBox(height: 5),
-                                  const Text('Select Status'),
-                                  DropdownButton<String>(
-                                    value: selectedStatus,
-                                    onChanged: (String? newStatus) {
-                                      setState(() {
-                                        selectedStatus = newStatus!;
-                                      });
-                                    },
-                                    items: [
-                                      DropdownMenuItem(
-                                        value: 'Menuju merchant',
-                                        child: Text(
+                                  Flexible(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Customer detail :',
                                             style: blackTextStyle.copyWith(
                                                 fontSize: 14,
-                                                fontWeight: medium),
-                                            'Menuju merchant'),
-                                      ),
-                                      DropdownMenuItem(
-                                        value: 'Pesanan sedang diantar ke tujuan',
-                                        child: Text(
+                                                fontWeight: semibold)),
+                                        const SizedBox(height: 10),
+                                        Text('${userDetails?['name']}',
                                             style: blackTextStyle.copyWith(
                                                 fontSize: 14,
-                                                fontWeight: medium),
-                                            'Pesanan sedang diantar ke tujuan'),
-                                      ),
-                                      DropdownMenuItem(
-                                        value:
-                                            'Pesanan sudah diterima customer',
-                                        child: Text(
+                                                fontWeight: medium)),
+                                        const SizedBox(height: 5),
+                                        Text(
+                                          '${customer_address}',
+                                          style: blackTextStyle.copyWith(
+                                              fontSize: 12, fontWeight: medium),
+                                          maxLines: 3, // Limit to 4 lines
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 5),
+                                        Text('${userDetails?['phone_number']}',
                                             style: blackTextStyle.copyWith(
                                                 fontSize: 14,
-                                                fontWeight: medium),
-                                            'Pesanan sudah diterima customer'),
-                                      ),
-                                      DropdownMenuItem(
-                                        value: 'Batalkan',
-                                        child: Text(
+                                                fontWeight: medium)),
+                                        const SizedBox(height: 5),
+                                        Text(
+                                            'Rp.${orderDetails?['total_amount']}',
                                             style: blackTextStyle.copyWith(
                                                 fontSize: 14,
-                                                fontWeight: medium),
-                                            'Batalkan'),
-                                      ),
-                                    ],
+                                                fontWeight: medium)),
+                                        const SizedBox(height: 5),
+                                      ],
+                                    ),
                                   ),
-                                  const SizedBox(height: 10),
-                                  ElevatedButton(
-                                    onPressed: updateStatus,
-                                    child: const Text('Update Status'),
+                                  Flexible(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Merchant Detail:',
+                                            style: blackTextStyle.copyWith(
+                                                fontSize: 14,
+                                                fontWeight: semibold)),
+                                        const SizedBox(height: 10),
+                                        Text('${merchantDetails?['name']}',
+                                            style: blackTextStyle.copyWith(
+                                                fontSize: 14,
+                                                fontWeight: medium)),
+                                        const SizedBox(height: 5),
+                                        Text(
+                                          '${merchant_address}',
+                                          style: blackTextStyle.copyWith(
+                                            fontSize: 12,
+                                            fontWeight: medium,
+                                          ),
+                                          maxLines: 3, // Limit to 4 lines
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(
+                                          width: 20,
+                                        )
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),
-                              Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Nama Merchant: ${merchantDetails?['name']}',
-                                      style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold),
-                                    ),
-                                    const SizedBox(height: 5),
-                                    Text(
-                                      'Alamat: \$${merchantDetails?['location']}',
-                                      style: const TextStyle(fontSize: 14),
-                                    ),
-                                    const SizedBox(height: 5),
-                                  ])
+                              Text(
+                                  'Status saat ini: ${orderDetails?['status']}',
+                                  style: blackTextStyle.copyWith(
+                                      fontSize: 14, fontWeight: medium)),
+                              const SizedBox(height: 5),
+                              Text('Update status order',
+                                  style: blackTextStyle.copyWith(
+                                      fontSize: 14, fontWeight: semibold)),
+                              DropdownButton<String>(
+                                style: blackTextStyle.copyWith(
+                                    fontSize: 14, fontWeight: light),
+                                value: selectedStatus,
+                                onChanged: (String? newStatus) {
+                                  setState(() {
+                                    selectedStatus = newStatus!;
+                                  });
+                                },
+                                items: [
+                                  DropdownMenuItem(
+                                    value: 'Pending',
+                                    child: Text('Pending'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'Menuju merchant',
+                                    child: Text('Menuju merchant'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'Pesanan sedang diantar ke tujuan',
+                                    child: Text(
+                                        'Pesanan sedang diantar ke tujuan'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'completed',
+                                    child: Text(
+                                        'Pesanan sedang sudah diterima customer'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'canceled',
+                                    child: Text('Canceled'),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  updateStatus();
+                                },
+                                icon: const Icon(
+                                    color: kWhiteColor, Icons.account_circle),
+                                label: Text("Update Status Orderan",
+                                    style: whiteTextStyle.copyWith(
+                                        fontSize: 16, fontWeight: semibold)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: kPrimaryColor,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(defaultRadius),
+                                  ),
+                                  minimumSize: const Size(60, 60),
+                                ),
+                              ),
                             ],
                           ),
                         ),

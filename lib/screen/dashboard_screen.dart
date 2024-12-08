@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:kongkon_app_driver/api/order_api.dart';
 import 'package:kongkon_app_driver/screen/order_detail.dart';
@@ -29,13 +30,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // API Services
   final Order orderApi = Order();
-  final GeocodingService geocodingService = GeocodingService();
 
   // Merchant Location Details
   String? address;
   String? error;
-
-
 
   @override
   void initState() {
@@ -47,7 +45,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _userId = authProvider.userData?['id'];
     });
     fetchSavedOrder();
-    
+
     if (_userId != null) {
       final socketService = Provider.of<SocketService>(context, listen: false);
       socketService.connect(_userId!);
@@ -57,7 +55,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _showOrderDialog(context, orderId, message, responseOptions);
       };
     }
-    fetchAddress();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchAddress();
+    });
+  }
+
+  void _fetchAddress() {
+    if (_savedOrder != null) {
+      final lat = _savedOrder?['from_location']['coordinates'][1];
+      final long = _savedOrder?['from_location']['coordinates'][0];
+      print("Fetching address for coordinates: $lat, $long");
+
+      final locationProvider =
+          Provider.of<LocationProvider>(context, listen: false);
+
+      locationProvider.fetchHumanReadableAddress(lat, long).then((_) {
+        setState(() {
+          address = locationProvider.address;
+        });
+        print("Fetched address: $address");
+      }).catchError((err) {
+        print("Error fetching address: $err");
+      });
+    } else {
+      print("No saved order to fetch address for.");
+    }
   }
 
   Future<void> fetchSavedOrder() async {
@@ -73,57 +95,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _savedOrder = orderDetails;
         _savedMerchant = merchantDetails['data'];
       });
+      _fetchAddress();
     }
   }
-
-
-Future<void> fetchAddress() async {
-  try {
-    if (_savedMerchant != null) {
-      // Log merchant details for debugging
-      print("Saved Merchant: $_savedMerchant");
-
-      final location = _savedMerchant?['location'];
-      if (location != null && location['coordinates'] != null) {
-        final List coordinates = location['coordinates'];
-
-        // Check if coordinates are valid
-        if (coordinates.length >= 2) {
-          final double longitude = coordinates[0];
-          final double latitude = coordinates[1];
-
-          // Log coordinates for debugging
-          print("Coordinates: Latitude = $latitude, Longitude = $longitude");
-
-          final formattedAddress =
-              await geocodingService.getFormattedAddress(latitude, longitude);
-
-          setState(() {
-            address = formattedAddress;
-            error = null; // Clear any errors
-          });
-        } else {
-          setState(() {
-            error = "Invalid coordinates received.";
-          });
-        }
-      } else {
-        setState(() {
-          error = "Location data is missing or incomplete.";
-        });
-      }
-    } else {
-      setState(() {
-        error = "No merchant data available.";
-      });
-    }
-  } catch (e) {
-    setState(() {
-      error = e.toString(); // Capture and display the error
-    });
-    print("Error fetching address: $e");
-  }
-}
 
   @override
   void dispose() {
@@ -165,31 +139,49 @@ Future<void> fetchAddress() async {
   void _showOrderDialog(BuildContext parentContext, String orderId,
       String message, List<String> responseOptions) {
     showDialog(
-      context: parentContext, // Use parent context
-      builder: (context) {
+      barrierDismissible: false,
+      context: parentContext,
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: Text('Mendapat Orderan Baru'),
-          content: Text(message),
-          actions: responseOptions.map((option) {
-            return TextButton(
-              onPressed: () {
-                final socketService =
-                    Provider.of<SocketService>(context, listen: false);
-                socketService.handleResponse(
-                    option == 'accept' ? 'accepted' : 'declined');
+            title: Text(
+                style:
+                    blackTextStyle.copyWith(fontSize: 14, fontWeight: medium),
+                'Mendapat Orderan Baru'),
+            content: Text(
+                style:
+                    blackTextStyle.copyWith(fontSize: 14, fontWeight: medium),
+                message),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  // Handle "accept" response
+                  final socketService =
+                      Provider.of<SocketService>(context, listen: false);
+                  socketService.handleResponse('accepted');
 
-                // Navigate to the order detail page
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => OrderDetailPage(orderId: orderId),
-                  ),
-                );
-              },
-              child: Text(option),
-            );
-          }).toList(),
-        );
+                  // Navigate to the OrderDetailPage
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => OrderDetailPage(orderId: orderId),
+                    ),
+                  );
+                },
+                child: Text('Accept'),
+              ),
+              TextButton(
+                onPressed: () {
+                  // Handle "decline" response
+                  final socketService =
+                      Provider.of<SocketService>(context, listen: false);
+                  socketService.handleResponse('declined');
+
+                  // Close the dialog without navigation
+                  Navigator.pop(context);
+                },
+                child: Text('Decline'),
+              ),
+            ]);
       },
     );
   }
@@ -197,14 +189,12 @@ Future<void> fetchAddress() async {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
-
-    // Wait until user data is loaded
     if (authProvider.userData == null) {
       return Scaffold(
         appBar: AppBar(
-          title: Text("Loading..."),
+          title: const Text("Loading..."),
         ),
-        body: Center(child: CircularProgressIndicator()),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -217,9 +207,11 @@ Future<void> fetchAddress() async {
           children: [
             CircleAvatar(
               radius: 20,
-              backgroundImage: NetworkImage(
-                  authProvider.userData?['avatarUrl'] ??
-                      'https://via.placeholder.com/150'),
+              backgroundImage: NetworkImage(authProvider
+                          .userData?['avatar_file_name'] !=
+                      null
+                  ? 'http://192.168.18.25:3333/uploads/avatars/${authProvider.userData?['avatar_file_name']}'
+                  : 'https://via.placeholder.com/150'),
             ),
             const SizedBox(width: 8),
             Column(
@@ -236,8 +228,8 @@ Future<void> fetchAddress() async {
               ],
             ),
             const Spacer(),
-            Row(
-              children: const [
+            const Row(
+              children: [
                 Icon(Icons.star, color: Colors.amber, size: 20),
                 SizedBox(width: 4),
                 Text("4.9", style: TextStyle(color: Colors.white)),
@@ -250,95 +242,129 @@ Future<void> fetchAddress() async {
         children: [
           if (_savedOrder != null)
             Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Card(
-                elevation: 5,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 150,
-                        height: 150,
-                        decoration: const BoxDecoration(
+                padding: const EdgeInsets.all(16.0),
+                child: Card(
+                    elevation: 3,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(defaultRadius),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment
+                          .center, // Ensures alignment at the top
+                      children: [
+                        Container(
+                          width: 50,
+                          height: 50,
+                          margin: const EdgeInsets.symmetric(horizontal: 20),
+                          decoration: const BoxDecoration(
                             image: DecorationImage(
-                                image: AssetImage('spoon.png'))),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("Order ${_savedOrder?['id']}",
-                              style: blackTextStyle.copyWith(
-                                  fontSize: 18, fontWeight: medium)),
-                          const SizedBox(height: 8),
-                          Text("${_savedMerchant?['name']} ",
-                              style: blackTextStyle.copyWith(
-                                  fontSize: 18, fontWeight: medium)),
-                          const SizedBox(height: 4),
-                          Text(
-                            "${address}",
-                            style: blackTextStyle.copyWith(
-                                fontSize: 18, fontWeight: medium),
-                          ),
-                          const SizedBox(height: 4),
-                          Text("${_savedOrder?['totalAmount']}",
-                              style: blackTextStyle.copyWith(
-                                  fontSize: 18, fontWeight: medium)),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: () {
-                              // Navigate to the order detail page when tapped
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => OrderDetailPage(
-                                      orderId: _savedOrder!['id'].toString()),
-                                ),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xFF6200EE),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
+                              image: AssetImage('spoon.png'),
                             ),
-                            child: Text(
-                                style: whiteTextStyle.copyWith(
-                                    fontSize: 18, fontWeight: medium),
-                                "View Order Details"),
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
+                        ),
+                        const SizedBox(
+                            width: 16), // Space between image and text
+                        Flexible(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 10),
+                              Text(
+                                "${_savedMerchant?['name']} ",
+                                style: blackTextStyle.copyWith(
+                                  fontSize: 18,
+                                  fontWeight: bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${address}',
+                                style: blackTextStyle.copyWith(
+                                  fontSize: 14,
+                                  fontWeight: medium,
+                                ),
+                                maxLines: 4, // Limit to 4 lines
+                                overflow: TextOverflow
+                                    .ellipsis, // Add ellipsis for overflow
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                // "Rp.${_savedOrder?['partner_profit']}",
+                                "Rp.${_savedOrder?['total_amount']}",
+                                style: blackTextStyle.copyWith(
+                                  fontSize: 18,
+                                  fontWeight: medium,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              ElevatedButton(
+                                onPressed: () {
+                                  // Navigate to the order detail page when tapped
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => OrderDetailPage(
+                                        orderId: _savedOrder!['id'].toString(),
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Text(
+                                  style: whiteTextStyle.copyWith(
+                                    color: kGreyColor,
+                                    fontSize: 16,
+                                    fontWeight: light,
+                                  ),
+                                  "Lihat selengkapnya",
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ))),
+          if (_savedOrder == null)
+            Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 300,
+                      height: 300,
+                      decoration: const BoxDecoration(
+                          image: DecorationImage(
+                              image: AssetImage('assets/illustration.png'))),
+                    ),
+                    Text(
+                      'Belum ada orderan yang masuk',
+                      style: blackTextStyle.copyWith(
+                          fontSize: 16, fontWeight: semibold),
+                    ),
+                  ],
                 ),
               ),
             ),
-          const Expanded(
-            child: Center(
-              child: Text(
-                'Belum ada orderan yang masuk',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-              ),
-            ),
-          ),
           Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton.icon(
-              onPressed: () {
-                _handleToggle(!isToggleActive);
-              },
-              icon: const Icon(Icons.arrow_forward),
-              label: const Text("Start Working"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isToggleActive ? Colors.green : Colors.grey,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  _handleToggle(!isToggleActive);
+                },
+                icon: const Icon(color: kWhiteColor, Icons.arrow_forward),
+                label: Text("Mulai Bekerja",
+                    style: whiteTextStyle.copyWith(
+                        fontSize: 16, fontWeight: semibold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isToggleActive ? kPrimaryColor : kGreyColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(defaultRadius),
+                  ),
+                  minimumSize: const Size(double.infinity, 50),
                 ),
-                minimumSize: const Size(double.infinity, 50),
               ),
             ),
           ),

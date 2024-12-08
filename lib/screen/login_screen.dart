@@ -37,8 +37,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 : ElevatedButton(
                     onPressed: () async {
                       final success = await authProvider.login(
-                        _emailController.text,
-                        _passwordController.text,
+                        _emailController.text ='ekasa1@gmail.com',
+                        _passwordController.text='ekasa123',
                       );
 
                       if (success) {

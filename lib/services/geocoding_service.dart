@@ -1,30 +1,42 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
-class GeocodingService {
-  final String apiKey = "AIzaSyChh_eCOsgZEydvhnMZdSY9F6L0RFyTyi0";
+class LocationProvider with ChangeNotifier {
+  String? _address;
+  bool _isLoading = false;
 
-  Future<String?> getFormattedAddress(double latitude, double longitude) async {
-    final url =
-        "https://maps.googleapis.com/maps/api/geocode/json?latlng=$latitude,$longitude&key=$apiKey";
+  String? get address => _address;
+  bool get isLoading => _isLoading;
+
+  Future<void> fetchHumanReadableAddress(
+      double latitude, double longitude) async {
+    _isLoading = true;
+    notifyListeners();
 
     try {
-      final response = await http.get(Uri.parse(url));
+      final apiKey =
+          'AIzaSyChh_eCOsgZEydvhnMZdSY9F6L0RFyTyi0'; // Replace with your API key
+      final url = Uri.parse(
+          'https://maps.googleapis.com/maps/api/geocode/json?latlng=$latitude,$longitude&key=$apiKey');
+
+      final response = await http.get(url);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-
-        if (data['status'] == "OK" && data['results'].isNotEmpty) {
-          return data['results'][0]['formatted_address'];
+        if (data['status'] == 'OK') {
+          _address = data['results'][0]['formatted_address'];
         } else {
-          throw Exception("Geocoding failed: ${data['status']}");
+          _address = 'Failed to reverse geocode: ${data['status']}';
         }
       } else {
-        throw Exception("Failed to fetch data: ${response.statusCode}");
+        _address = 'Failed to fetch address';
       }
-    } catch (error) {
-      print("Error fetching geocoding data: $error");
-      return null;
+    } catch (e) {
+      _address = 'Error: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 }

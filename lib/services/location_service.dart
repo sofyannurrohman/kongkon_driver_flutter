@@ -13,14 +13,12 @@ class LocationService {
       'latitude': latitude,
       'longitude': longitude,
     });
-
     try {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: body,
       );
-      print(response);
     } catch (e) {
       print("Error while sending location: $e");
     }

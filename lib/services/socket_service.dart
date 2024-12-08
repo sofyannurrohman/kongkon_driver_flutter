@@ -78,7 +78,7 @@ String? _currentOrderId; // Track the current order ID
   }
 }
 
- // New: Handle driver response
+
   void handleResponse(String response) {
     if (_socket == null || !(_socket?.connected ?? false)) {
       print('Socket is not connected');
