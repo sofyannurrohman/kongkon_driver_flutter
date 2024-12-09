@@ -8,7 +8,7 @@ class LocationService {
     required double latitude,
     required double longitude,
   }) async {
-    final url = Uri.parse('http://localhost:3333/api/v1/partner/location/$userId');
+    final url = Uri.parse('http://192.168.18.25:3333/api/v1/partner/location/$userId');
     final body = jsonEncode({
       'latitude': latitude,
       'longitude': longitude,

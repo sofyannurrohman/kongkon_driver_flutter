@@ -20,7 +20,7 @@ String? _currentOrderId; // Track the current order ID
 
     if (_socket == null) {
       // Set up socket connection options
-      _socket = IO.io('http://localhost:3333', <String, dynamic>{
+      _socket = IO.io('http://192.168.18.25:3333', <String, dynamic>{
         'transports': ['websocket'],
         'autoConnect': false,
         'query': {'userId': userId}, // Send userId as query param

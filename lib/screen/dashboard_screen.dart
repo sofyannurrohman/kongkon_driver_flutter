@@ -8,6 +8,7 @@ import 'package:kongkon_app_driver/services/geocoding_service.dart';
 import 'package:kongkon_app_driver/services/location_service.dart';
 import 'package:kongkon_app_driver/services/socket_service.dart';
 import 'package:kongkon_app_driver/shared/theme.dart';
+import 'package:kongkon_app_driver/widget/drawer.dart';
 import 'package:provider/provider.dart';
 import '../api/auth_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -21,7 +22,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _driverStatus = "Work status inactive";
   bool isToggleActive = false;
   Timer? _timer;
-  String endpoint = "http://localhost:3333/api/v1/partner/location/";
+  String endpoint = "http://192.168.18.25:3333/api/v1/partner/location/";
 
   String? _userId;
   String? _currentOrderId;
@@ -64,8 +65,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (_savedOrder != null) {
       final lat = _savedOrder?['from_location']['coordinates'][1];
       final long = _savedOrder?['from_location']['coordinates'][0];
-      print("Fetching address for coordinates: $lat, $long");
-
       final locationProvider =
           Provider.of<LocationProvider>(context, listen: false);
 
@@ -73,7 +72,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         setState(() {
           address = locationProvider.address;
         });
-        print("Fetched address: $address");
       }).catchError((err) {
         print("Error fetching address: $err");
       });
@@ -107,6 +105,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<Map<String, double>> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return Future.error('Location services are disabled.');
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        return Future.error('Location permissions are denied');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      // Permissions are denied forever, handle appropriately.
+      return Future.error(
+          'Location permissions are permanently denied, we cannot request permissions.');
+    }
     Position position = await Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
     );
@@ -153,33 +173,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 message),
             actions: [
               TextButton(
-                onPressed: () {
+                onPressed: () async {
+                  final orderDetails =
+                      await orderApi.fetchOrderDetails(orderId);
+                  final merchantDetails = await orderApi
+                      .fetchMerchantDetails(orderDetails['merchant_id']);
+
+                  setState(() {
+                    _savedOrder = orderDetails;
+                    _savedMerchant = merchantDetails['data'];
+                  });
+                  _fetchAddress();
                   // Handle "accept" response
                   final socketService =
-                      Provider.of<SocketService>(context, listen: false);
+                      Provider.of<SocketService>(parentContext, listen: false);
                   socketService.handleResponse('accepted');
-
+                  // Close the dialog
+                  Navigator.pop(dialogContext);
                   // Navigate to the OrderDetailPage
                   Navigator.push(
-                    context,
+                    parentContext,
                     MaterialPageRoute(
                       builder: (context) => OrderDetailPage(orderId: orderId),
                     ),
                   );
                 },
-                child: Text('Accept'),
+                child: Text(
+                  'Terima',
+                  style: blackTextStyle.copyWith(
+                      fontSize: 14, fontWeight: semibold),
+                ),
               ),
               TextButton(
                 onPressed: () {
                   // Handle "decline" response
                   final socketService =
-                      Provider.of<SocketService>(context, listen: false);
+                      Provider.of<SocketService>(parentContext, listen: false);
                   socketService.handleResponse('declined');
 
                   // Close the dialog without navigation
-                  Navigator.pop(context);
+                  Navigator.pop(parentContext);
                 },
-                child: Text('Decline'),
+                child: Text(
+                  'Tolak',
+                  style: blackTextStyle.copyWith(
+                      fontSize: 14, fontWeight: semibold),
+                ),
               ),
             ]);
       },
@@ -205,14 +244,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
         automaticallyImplyLeading: false,
         title: Row(
           children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundImage: NetworkImage(authProvider
-                          .userData?['avatar_file_name'] !=
-                      null
-                  ? 'http://192.168.18.25:3333/uploads/avatars/${authProvider.userData?['avatar_file_name']}'
-                  : 'https://via.placeholder.com/150'),
-            ),
+            Builder(builder: (context) {
+              return GestureDetector(
+                onTap: () {
+                  Scaffold.of(context).openDrawer();
+                },
+                child: CircleAvatar(
+                  radius: 20,
+                  backgroundImage: NetworkImage(authProvider
+                              .userData?['avatar_file_name'] !=
+                          null
+                      ? 'http://192.168.18.25:3333/uploads/avatars/${authProvider.userData?['avatar_file_name']}'
+                      : 'https://via.placeholder.com/150'),
+                ),
+              );
+            }),
             const SizedBox(width: 8),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,6 +284,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
       ),
+      drawer: DrawerWidget(),
       body: Column(
         children: [
           if (_savedOrder != null)
@@ -276,16 +323,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   fontWeight: bold,
                                 ),
                               ),
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 10),
                               Text(
-                                '${address}',
+                                "${address} ",
                                 style: blackTextStyle.copyWith(
-                                  fontSize: 14,
-                                  fontWeight: medium,
+                                  fontSize: 18,
+                                  fontWeight: bold,
                                 ),
-                                maxLines: 4, // Limit to 4 lines
-                                overflow: TextOverflow
-                                    .ellipsis, // Add ellipsis for overflow
                               ),
                               const SizedBox(height: 4),
                               Text(

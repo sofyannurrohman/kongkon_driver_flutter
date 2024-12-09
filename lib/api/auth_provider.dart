@@ -4,7 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 class AuthProvider with ChangeNotifier {
-  final String _baseUrl = "http://localhost:3333/api/v1";
+  final String _baseUrl = "http://192.168.18.25:3333/api/v1";
   final FlutterSecureStorage _storage = FlutterSecureStorage();
 
   String? _userId;

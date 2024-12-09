@@ -209,8 +209,8 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                         ),
                         Container(
                           width:
-                              400, // Makes the container fill the width of its parent
-                          height: 400,
+                              350, // Makes the container fill the width of its parent
+                          height: 350,
                           decoration: BoxDecoration(
                             color: Colors
                                 .white, // Set your container background color here
@@ -304,10 +304,10 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                               const SizedBox(height: 5),
                               Text('Update status order',
                                   style: blackTextStyle.copyWith(
-                                      fontSize: 14, fontWeight: semibold)),
+                                      fontSize: 12, fontWeight: semibold)),
                               DropdownButton<String>(
                                 style: blackTextStyle.copyWith(
-                                    fontSize: 14, fontWeight: light),
+                                    fontSize: 10, fontWeight: light),
                                 value: selectedStatus,
                                 onChanged: (String? newStatus) {
                                   setState(() {
@@ -339,7 +339,6 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 10),
                               ElevatedButton.icon(
                                 onPressed: () {
                                   updateStatus();
