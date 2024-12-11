@@ -19,13 +19,12 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  String _driverStatus = "Work status inactive";
+  String _driverStatus = "Status kerja tidak aktif";
   bool isToggleActive = false;
   Timer? _timer;
-  String endpoint = "http://192.168.18.25:3333/api/v1/partner/location/";
-
+  String endpoint = "http://192.168.1.35:3333/api/v1/partner/location/";
+  final SocketService socketService = SocketService();
   String? _userId;
-  String? _currentOrderId;
   Map<String, dynamic>? _savedOrder;
   Map<String, dynamic>? _savedMerchant;
 
@@ -47,13 +46,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
     fetchSavedOrder();
 
-    if (_userId != null) {
-      final socketService = Provider.of<SocketService>(context, listen: false);
+     if (_userId != null) {
       socketService.connect(_userId!);
 
-      socketService.orderAssignmentCallback =
-          (String orderId, String message, List<String> responseOptions) {
-        _showOrderDialog(context, orderId, message, responseOptions);
+      // Set up order assignment callback
+      socketService.orderAssignmentCallback = (String orderId, String message, List<String> responseOptions) {
+        // Check if the widget is still mounted before trying to show the dialog
+        if (mounted) {
+          _showOrderDialog(context, orderId, message, responseOptions);
+        }
       };
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -87,6 +88,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (savedOrderId != null) {
       final orderDetails =
           await orderApi.fetchOrderDetails(savedOrderId.toString());
+      if (orderDetails['partner_id'] == _userId) {
+        setState(() {
+          _savedOrder = null;
+        });
+
+        print('>>>>${_savedOrder}');
+        return;
+      }
       final merchantDetails =
           await orderApi.fetchMerchantDetails(orderDetails['merchant_id']);
       setState(() {
@@ -136,28 +145,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
     };
   }
 
-  void _handleToggle(bool value) {
-    setState(() {
-      isToggleActive = value;
-    });
-
-    if (isToggleActive && _userId != null) {
-      _timer?.cancel();
-      _timer = Timer.periodic(const Duration(seconds: 5), (timer) async {
-        Map<String, double> location = await _getCurrentLocation();
-        await LocationService.updateLocation(
-          userId: _userId!,
-          latitude: location['latitude']!,
-          longitude: location['longitude']!,
-        );
+  void _handleToggle(bool value) async {
+    if (isToggleActive) {
+      // Stop tracking
+      setState(() {
+        _driverStatus = 'Status kerja tidak aktif';
+        isToggleActive = false;
       });
-    } else {
       _timer?.cancel();
+      await LocationService.deleteLocation(userId: _userId);
+      print('Location deleted and timer stopped');
+    } else {
+      Map<String, double> location = await _getCurrentLocation();
+      await LocationService.updateLocation(
+        userId: _userId!,
+        latitude: location['latitude']!,
+        longitude: location['longitude']!,
+      );
+      print(location);
+      setState(() {
+        _driverStatus = 'Status kerja aktif';
+        isToggleActive = true;
+      });
+
+      if (_userId != null) {
+        _timer = Timer.periodic(Duration(seconds: 120), (timer) async {
+          print('Location periodically updated');
+          if (isToggleActive) {
+            Map<String, double> location = await _getCurrentLocation();
+            await LocationService.updateLocation(
+              userId: _userId!,
+              latitude: location['latitude']!,
+              longitude: location['longitude']!,
+            );
+          } else {
+            timer.cancel();
+            _timer = null;
+            print('Timer stopped');
+          }
+        });
+      }
     }
   }
 
   void _showOrderDialog(BuildContext parentContext, String orderId,
       String message, List<String> responseOptions) {
+    if (!Navigator.of(parentContext).canPop()) {
+    // If the context is no longer valid, don't show the dialog
+    return;
+  }
     showDialog(
       barrierDismissible: false,
       context: parentContext,
@@ -178,11 +214,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       await orderApi.fetchOrderDetails(orderId);
                   final merchantDetails = await orderApi
                       .fetchMerchantDetails(orderDetails['merchant_id']);
-
+                  _handleToggle(!isToggleActive);
                   setState(() {
                     _savedOrder = orderDetails;
                     _savedMerchant = merchantDetails['data'];
                   });
+
                   _fetchAddress();
                   // Handle "accept" response
                   final socketService =
@@ -254,7 +291,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   backgroundImage: NetworkImage(authProvider
                               .userData?['avatar_file_name'] !=
                           null
-                      ? 'http://192.168.18.25:3333/uploads/avatars/${authProvider.userData?['avatar_file_name']}'
+                      ? 'http://192.168.1.35:3333/uploads/avatars/${authProvider.userData?['avatar_file_name']}'
                       : 'https://via.placeholder.com/150'),
                 ),
               );
@@ -284,7 +321,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
       ),
-      drawer: DrawerWidget(),
+      drawer: DrawerWidget(
+          authProvider: authProvider,
+          userId: authProvider.userData?['id'],
+          avatar_file_name: authProvider.userData?['avatar_file_name'],
+          name: authProvider.userData?['name'],
+          license: authProvider.userData?['license_number']),
       body: Column(
         children: [
           if (_savedOrder != null)
@@ -327,8 +369,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               Text(
                                 "${address} ",
                                 style: blackTextStyle.copyWith(
-                                  fontSize: 18,
-                                  fontWeight: bold,
+                                  fontSize: 12,
+                                  fontWeight: regular,
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -396,7 +438,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               alignment: Alignment.bottomCenter,
               child: ElevatedButton.icon(
                 onPressed: () {
-                  _handleToggle(!isToggleActive);
+                  if (!isToggleActive) {
+                    _handleToggle(!isToggleActive);
+                  } else if (isToggleActive) {
+                    _handleToggle(isToggleActive);
+                  }
                 },
                 icon: const Icon(color: kWhiteColor, Icons.arrow_forward),
                 label: Text("Mulai Bekerja",

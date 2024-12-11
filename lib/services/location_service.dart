@@ -8,7 +8,7 @@ class LocationService {
     required double latitude,
     required double longitude,
   }) async {
-    final url = Uri.parse('http://192.168.18.25:3333/api/v1/partner/location/$userId');
+    final url = Uri.parse('http://192.168.1.35:3333/api/v1/partner/location/$userId');
     final body = jsonEncode({
       'latitude': latitude,
       'longitude': longitude,
@@ -23,4 +23,20 @@ class LocationService {
       print("Error while sending location: $e");
     }
   }
+  static Future<void> deleteLocation({
+    required String? userId,
+  }) async {
+    final url = Uri.parse('http://192.168.1.35:3333/api/v1/partner/$userId');
+    
+    try {
+      final response = await http.delete(
+        url,
+        headers: {'Content-Type': 'application/json'},
+      );
+      print(response);
+    } catch (e) {
+      print("Error while sending location: $e");
+    }
+  }
+  
 }

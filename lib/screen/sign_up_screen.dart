@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:kongkon_app_driver/shared/theme.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -7,11 +9,43 @@ class SignUpScreen extends StatefulWidget {
   @override
   State<SignUpScreen> createState() => _SignUpScreenState();
 }
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _licenseController = TextEditingController();
+
+final _nameController = TextEditingController();
+final _emailController = TextEditingController();
+final _passwordController = TextEditingController();
+final _licenseController = TextEditingController();
+final _phoneController = TextEditingController();
+
 class _SignUpScreenState extends State<SignUpScreen> {
+  Future<void> register() async {
+    final url = Uri.parse('http://192.168.1.35:3333/api/v1/users/drivers');
+
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'name': _nameController.text,
+        'phone': _phoneController.text,
+        'email': _emailController.text,
+        'license_number': _licenseController.text,
+        'password': _passwordController.text,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      // Registration successful, show a success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Registration successful!')),
+      );
+      Navigator.pushReplacementNamed(context, '/login');
+    } else {
+      // Registration failed, show an error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Registration failed. Please try again.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     Widget header() {
@@ -103,7 +137,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 height: 6,
               ),
               TextFormField(
-                  controller: _passwordController,
+                controller: _passwordController,
                 obscureText: true,
                 cursorColor: kBlackColor,
                 decoration: InputDecoration(
@@ -132,7 +166,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 height: 6,
               ),
               TextFormField(
-                  controller: _licenseController,
+                controller: _licenseController,
                 cursorColor: kBlackColor,
                 decoration: InputDecoration(
                   hintText: ' Your license',
@@ -149,12 +183,42 @@ class _SignUpScreenState extends State<SignUpScreen> {
         );
       }
 
+      Widget phoneInput() {
+        return Container(
+          margin: EdgeInsets.only(bottom: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Phone Number'),
+              const SizedBox(
+                height: 6,
+              ),
+              TextFormField(
+                controller: _phoneController,
+                cursorColor: kBlackColor,
+                decoration: InputDecoration(
+                  hintText: ' Your phone number',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(defaultRadius)),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(defaultRadius),
+                    borderSide: BorderSide(color: kPrimaryColor),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+
       Widget submitButton() {
         return Container(
+          margin: EdgeInsets.only(top: 20),
           width: double.infinity,
-          height: 55,
+          height: 45,
           child: TextButton(
-              onPressed: () async{
+              onPressed: () {
+                register();
               },
               style: TextButton.styleFrom(
                 backgroundColor: kPrimaryColor,
@@ -181,7 +245,31 @@ class _SignUpScreenState extends State<SignUpScreen> {
             emailInput(),
             passwordInput(),
             licenseInput(),
-            submitButton()
+            phoneInput(),
+            submitButton(),
+            Container(
+              margin: EdgeInsets.only(top: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text("Sudah Punya Akun ? ",
+                      style: blackTextStyle.copyWith(
+                        fontSize: 14,
+                        fontWeight: regular,
+                      )),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.pushNamed(context, '/login');
+                    },
+                    child: Text("Login",
+                        style: blackTextStyle.copyWith(
+                          fontSize: 14,
+                          fontWeight: medium,
+                        )),
+                  )
+                ],
+              ),
+            ),
           ],
         ),
       );

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:kongkon_app_driver/shared/theme.dart';
 import 'package:provider/provider.dart';
 import '../api/auth_provider.dart';
 import 'dashboard_screen.dart';
-import 'package:kongkon_app_driver/screen/sign_up_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -19,7 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
 
     return Scaffold(
-      backgroundColor: Colors.grey[200],
+      backgroundColor: kBackgroundColor,
       body: Center(
         child: SingleChildScrollView(
           child: Padding(
@@ -28,22 +28,13 @@ class _LoginScreenState extends State<LoginScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Image.asset(
-                  'assets/logo-driver.png', // Sesuaikan dengan path logo Anda
-                  height: 200,
-                  color: Colors.blue,
+                  'assets/dark-logo.png', // Sesuaikan dengan path logo Anda
+                  height: 70,
                 ),
-                const SizedBox(height: 50),
-                Text(
-                  "KongKon Partner",
-                  style: GoogleFonts.poppins(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
+
                 const SizedBox(height: 10),
                 Text(
-                  "Sign in to access",
+                  "Login untuk mengakses",
                   style: GoogleFonts.poppins(
                     fontSize: 16,
                     color: Colors.grey[600],
@@ -97,31 +88,27 @@ class _LoginScreenState extends State<LoginScreen> {
                             }
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            backgroundColor: kPrimaryColor,
+                            padding: const EdgeInsets.symmetric(vertical: 20),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: Text(
-                            "Sign In",
-                            style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
+                          
+                          child: Text("Sign In",
+                              style: whiteTextStyle.copyWith(
+                                  fontSize: 18, fontWeight: medium)),
                         ),
                       ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 40),
 
                 // Footer
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      "Doesn't have account ? ",
-                      style: GoogleFonts.poppins(fontSize: 12),
+                      "Belum Punya Akun ? ",
+                      style: GoogleFonts.poppins(fontSize: 14),
                     ),
                     GestureDetector(
                       onTap: () {
@@ -130,8 +117,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Text(
                         "Sign Up",
                         style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: Colors.blue,
+                          fontSize: 14,
+                          color: kPrimaryColor,
                           fontWeight: FontWeight.bold,
                         ),
                       ),

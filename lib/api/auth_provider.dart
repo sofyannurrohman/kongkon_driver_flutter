@@ -2,9 +2,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthProvider with ChangeNotifier {
-  final String _baseUrl = "http://192.168.18.25:3333/api/v1";
+  final String _baseUrl = "http://192.168.1.35:3333/api/v1";
   final FlutterSecureStorage _storage = FlutterSecureStorage();
 
   String? _userId;
@@ -18,46 +19,46 @@ class AuthProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
 
   Future<bool> login(String email, String password) async {
-  _isLoading = true;
-  notifyListeners();
+    _isLoading = true;
+    notifyListeners();
 
-  try {
-    final response = await http.post(
-      Uri.parse('$_baseUrl/auth/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
-    );
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'password': password}),
+      );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
 
-      // Access user_id and access_token inside 'data'
-      _userId = data['data']['user_id'];
-      _token = data['data']['access_token'];
+        // Access user_id and access_token inside 'data'
+        _userId = data['data']['user_id'];
+        _token = data['data']['access_token'];
 
-      print("Token: $_token");
-      print("User ID: $_userId");
+        print("Token: $_token");
+        print("User ID: $_userId");
 
-      // Save token and user ID to secure storage
-      await _storage.write(key: 'access_token', value: _token);
-      await _storage.write(key: 'user_id', value: _userId);
+        // Save token and user ID to secure storage
+        await _storage.write(key: 'access_token', value: _token);
+        await _storage.write(key: 'user_id', value: _userId);
 
-      await loadUserData(); // Fetch user data after login
-      _isLoading = false;
-      notifyListeners();
-      return true;
-    } else {
+        await loadUserData(); // Fetch user data after login
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      print("Login Error: $e");
       _isLoading = false;
       notifyListeners();
       return false;
     }
-  } catch (e) {
-    print("Login Error: $e");
-    _isLoading = false;
-    notifyListeners();
-    return false;
   }
-}
 
   Future<void> loadUserData() async {
     final token = await _storage.read(key: 'access_token');
@@ -77,7 +78,7 @@ class AuthProvider with ChangeNotifier {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-         _userData = data['data'];
+        _userData = data['data'];
         notifyListeners();
       } else {
         print("Failed to fetch user data: ${response.statusCode}");
@@ -91,6 +92,8 @@ class AuthProvider with ChangeNotifier {
     _userId = null;
     _token = null;
     _userData = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('currentOrderId'); // Clear the saved order on logout
 
     await _storage.deleteAll();
     notifyListeners();

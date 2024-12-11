@@ -1,6 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:kongkon_app_driver/api/auth_provider.dart';
+import 'package:kongkon_app_driver/shared/theme.dart';
+import 'package:provider/provider.dart';
 
 class DrawerWidget extends StatelessWidget {
+  final AuthProvider? authProvider;
+  final String? avatar_file_name;
+  final String? name;
+  final String? license;
+  final String? userId;
+  const DrawerWidget(
+      {Key? key,
+      this.avatar_file_name,
+      this.name,
+      this.license,
+      this.userId,
+      this.authProvider})
+      : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return Drawer(
@@ -17,26 +34,26 @@ class DrawerWidget extends StatelessWidget {
                 GestureDetector(
                   onTap: () {
                     Navigator.pop(context); // Close the drawer
-                    Navigator.pushNamed(context, '/profile'); // Navigate to profile
+                    Navigator.pushNamed(
+                        context, '/profile'); // Navigate to profile
                   },
                   child: CircleAvatar(
                     radius: 30,
                     backgroundImage: NetworkImage(
-                        'https://via.placeholder.com/150'), // Placeholder for profile image
+                        'http://192.168.1.35:3333/uploads/avatars/${avatar_file_name}'), // Placeholder for profile image
                   ),
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Driver Name', // Replace with dynamic name
-                  style: const TextStyle(
+                  '${name}', // Replace with dynamic name
+                  style: whiteTextStyle.copyWith(
                     fontSize: 18,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: semibold,
                   ),
                 ),
                 const SizedBox(height: 5),
                 Text(
-                  'driver@example.com', // Replace with dynamic email
+                  '${license}', // Replace with dynamic email
                   style: const TextStyle(
                     fontSize: 14,
                     color: Colors.white70,
@@ -47,28 +64,41 @@ class DrawerWidget extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.account_balance_wallet),
-            title: const Text('Wallet'),
+            title: Text(
+              'Wallet',
+              style:
+                  blackTextStyle.copyWith(fontSize: 18, fontWeight: semibold),
+            ),
             onTap: () {
               Navigator.pop(context); // Close the drawer
-              Navigator.pushNamed(context, '/wallet'); // Navigate to wallet
+              if (userId != null) {
+                // Pass userId when navigating to wallet
+                Navigator.pushNamed(context, '/wallet', arguments: userId);
+              } // Navigate to wallet
             },
           ),
           ListTile(
             leading: const Icon(Icons.settings),
-            title: const Text('Settings'),
+            title: Text(
+              'Settings',
+              style:
+                  blackTextStyle.copyWith(fontSize: 18, fontWeight: semibold),
+            ),
             onTap: () {
-              Navigator.pop(context); // Close the drawer
+              Navigator.pop(context);
               Navigator.pushNamed(context, '/settings'); // Navigate to settings
             },
           ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout),
-            title: const Text('Logout'),
+            title: Text(
+              'Logout',
+              style: blackTextStyle.copyWith(fontSize: 18, fontWeight: medium),
+            ),
             onTap: () {
-              Navigator.pop(context); // Close the drawer
-              // Implement logout logic
-              print('Logging out...');
+              authProvider!.logout();
+              Navigator.pushReplacementNamed(context, '/login');
             },
           ),
         ],
