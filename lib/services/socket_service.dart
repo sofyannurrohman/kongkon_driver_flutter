@@ -28,7 +28,7 @@ class SocketService extends ChangeNotifier {
 
     if (_socket == null) {
       // Set up socket connection options
-      _socket = IO.io('http://192.168.1.35:3333', <String, dynamic>{
+      _socket = IO.io('https://b0be-116-12-47-61.ngrok-free.app', <String, dynamic>{
         'transports': ['websocket'],
         'autoConnect': false,
         'query': {'userId': userId}, // Send userId as query param
@@ -187,6 +187,7 @@ class SocketService extends ChangeNotifier {
   // Disconnect the socket when it's no longer needed
   void disconnect() {
     _socket?.disconnect();
+    _socket = null;
     print('Socket disconnected');
   }
 

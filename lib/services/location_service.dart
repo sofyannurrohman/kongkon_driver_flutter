@@ -8,7 +8,7 @@ class LocationService {
     required double latitude,
     required double longitude,
   }) async {
-    final url = Uri.parse('http://192.168.1.35:3333/api/v1/partner/location/$userId');
+    final url = Uri.parse('https://b0be-116-12-47-61.ngrok-free.app/api/v1/partner/location/$userId');
     final body = jsonEncode({
       'latitude': latitude,
       'longitude': longitude,
@@ -26,7 +26,7 @@ class LocationService {
   static Future<void> deleteLocation({
     required String? userId,
   }) async {
-    final url = Uri.parse('http://192.168.1.35:3333/api/v1/partner/$userId');
+    final url = Uri.parse('https://b0be-116-12-47-61.ngrok-free.app/api/v1/partner/$userId');
     
     try {
       final response = await http.delete(

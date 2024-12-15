@@ -30,7 +30,7 @@ class _WalletScreenState extends State<WalletScreen> {
 
   Future<Map<String, dynamic>> fetchWalletData(String userId) async {
     final response = await http
-        .get(Uri.parse('http://localhost:3333/api/v1/wallets/users/$userId'));
+        .get(Uri.parse('https://b0be-116-12-47-61.ngrok-free.app/api/v1/wallets/users/$userId'));
 
     if (response.statusCode == 200) {
       // Successfully fetched wallet data, parse the JSON response

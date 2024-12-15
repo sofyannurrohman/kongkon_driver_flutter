@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kongkon_app_driver/api/auth_provider.dart';
+import 'package:kongkon_app_driver/services/socket_service.dart';
 import 'package:kongkon_app_driver/shared/theme.dart';
 import 'package:provider/provider.dart';
 
@@ -37,11 +38,11 @@ class DrawerWidget extends StatelessWidget {
                     Navigator.pushNamed(
                         context, '/profile'); // Navigate to profile
                   },
-                  child: CircleAvatar(
-                    radius: 30,
-                    backgroundImage: NetworkImage(
-                        'http://192.168.1.35:3333/uploads/avatars/${avatar_file_name}'), // Placeholder for profile image
-                  ),
+                  child: Icon(
+          Icons.person, // Use a default icon when the avatar is null
+          size: 30,
+          color: Colors.white,
+        )
                 ),
                 const SizedBox(height: 10),
                 Text(
@@ -97,6 +98,8 @@ class DrawerWidget extends StatelessWidget {
               style: blackTextStyle.copyWith(fontSize: 18, fontWeight: medium),
             ),
             onTap: () {
+              final socketService = Provider.of<SocketService>(context, listen: false);
+              socketService.disconnect();
               authProvider!.logout();
               Navigator.pushReplacementNamed(context, '/login');
             },

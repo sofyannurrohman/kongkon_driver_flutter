@@ -22,7 +22,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _driverStatus = "Status kerja tidak aktif";
   bool isToggleActive = false;
   Timer? _timer;
-  String endpoint = "http://192.168.1.35:3333/api/v1/partner/location/";
+  String endpoint =
+      "https://b0be-116-12-47-61.ngrok-free.app/api/v1/partner/location/";
   final SocketService socketService = SocketService();
   String? _userId;
   Map<String, dynamic>? _savedOrder;
@@ -95,7 +96,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         });
         return;
       }
-      if (!mounted) return;
       final merchantDetails =
           await orderApi.fetchMerchantDetails(orderDetails['merchant_id']);
       setState(() {
@@ -192,12 +192,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void _showOrderDialog(BuildContext parentContext, String orderId,
       String message, List<String> responseOptions) {
-         _handleToggle(isToggleActive);
+    _handleToggle(isToggleActive);
     if (!mounted) return;
-    if (!Navigator.of(parentContext).canPop()) {
-      // If the context is no longer valid, don't show the dialog
-      return;
-    }
+
+    print("Showing order dialog for order: $orderId");
+
     showDialog(
       barrierDismissible: false,
       context: parentContext,
@@ -292,11 +291,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 },
                 child: CircleAvatar(
                   radius: 20,
-                  backgroundImage: NetworkImage(authProvider
-                              .userData?['avatar_file_name'] !=
-                          null
-                      ? 'http://192.168.1.35:3333/uploads/avatars/${authProvider.userData?['avatar_file_name']}'
-                      : 'https://via.placeholder.com/150'),
+                  backgroundImage: (authProvider
+                                  .userData?['avatar_file_name'] !=
+                              null &&
+                          authProvider.userData?['avatar_file_name'] != '')
+                      ? NetworkImage(
+                          'https://b0be-116-12-47-61.ngrok-free.app/uploads/avatars/${authProvider.userData?['avatar_file_name']}')
+                      : null, // No image, so don't set a background image
+                  backgroundColor: (authProvider
+                                  .userData?['avatar_file_name'] ==
+                              null ||
+                          authProvider.userData?['avatar_file_name'] == '')
+                      ? Colors.grey // Grey circle if no avatar
+                      : null, // Default transparent background when there's an avatar
+                  child: (authProvider.userData?['avatar_file_name'] == null ||
+                          authProvider.userData?['avatar_file_name'] == '')
+                      ? Icon(
+                          Icons.person, // Person icon when no avatar
+                          color: Colors.white, // White color for the icon
+                          size: 20, // Icon size to fit within the CircleAvatar
+                        )
+                      : null, // If avatar exists, no child is needed
                 ),
               );
             }),
@@ -436,35 +451,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
             ),
-            if(_savedOrder == null)
-
-     
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  if (!isToggleActive) {
-                    _handleToggle(!isToggleActive);
-                  } else if (isToggleActive) {
-                    _handleToggle(isToggleActive);
-                  }
-                },
-                icon: const Icon(color: kWhiteColor, Icons.arrow_forward),
-                label: Text("Mulai Bekerja",
-                    style: whiteTextStyle.copyWith(
-                        fontSize: 16, fontWeight: semibold)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isToggleActive ? kPrimaryColor : kGreyColor,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(defaultRadius),
+          if (_savedOrder == null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    if (!isToggleActive) {
+                      _handleToggle(!isToggleActive);
+                    } else if (isToggleActive) {
+                      _handleToggle(isToggleActive);
+                    }
+                  },
+                  icon: const Icon(color: kWhiteColor, Icons.arrow_forward),
+                  label: Text("Mulai Bekerja",
+                      style: whiteTextStyle.copyWith(
+                          fontSize: 16, fontWeight: semibold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        isToggleActive ? kPrimaryColor : kGreyColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(defaultRadius),
+                    ),
+                    minimumSize: const Size(double.infinity, 50),
                   ),
-                  minimumSize: const Size(double.infinity, 50),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );

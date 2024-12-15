@@ -103,7 +103,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         customerLocation = LatLng(toCoordinates[1], toCoordinates[0]);
       });
 
-      _startLocationUpdates(merchantLocation!, customerLocation!, orderDetails);
+      _startLocationUpdates(orderDetails!);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _fetchAddress();
       });
@@ -148,78 +148,120 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     };
   }
 
-  void _startLocationUpdates(
-      LatLng merchantLocation, LatLng customerLocation, orderDetails) async {
-    final socketService = Provider.of<SocketService>(context, listen: false);
-    LatLng? mockDriverLocation; // To track the driver's mock location
-    const double stepSize = 0.001; // Adjust step size for movement
-    bool headingToMerchant = true; // State to determine the current destination
+  // void _startLocationUpdates(
+  //     LatLng merchantLocation, LatLng customerLocation, orderDetails) async {
+  //   final socketService = Provider.of<SocketService>(context, listen: false);
+  //   LatLng? mockDriverLocation; // To track the driver's mock location
+  //   const double stepSize = 0.001; // Adjust step size for movement
+  //   bool headingToMerchant = true; // State to determine the current destination
 
-    locationUpdateTimer = Timer.periodic(Duration(seconds: 10), (timer) async {
-      try {
-        if (mockDriverLocation == null) {
-          // Initialize mock location with the driver's current location
-          final location = await _getCurrentLocation();
-          mockDriverLocation =
-              LatLng(location['latitude']!, location['longitude']!);
-        } else {
-          // Determine the current target destination
-          final LatLng targetLocation =
-              headingToMerchant ? merchantLocation : customerLocation;
+  //   locationUpdateTimer = Timer.periodic(Duration(seconds: 10), (timer) async {
+  //     try {
+  //       if (mockDriverLocation == null) {
+  //         // Initialize mock location with the driver's current location
+  //         final location = await _getCurrentLocation();
+  //         mockDriverLocation =
+  //             LatLng(location['latitude']!, location['longitude']!);
+  //       } else {
+  //         // Determine the current target destination
+  //         final LatLng targetLocation =
+  //             headingToMerchant ? merchantLocation : customerLocation;
 
-          // Calculate the direction (bearing) towards the current target
-          final double deltaLat =
-              targetLocation.latitude - mockDriverLocation!.latitude;
-          final double deltaLng =
-              targetLocation.longitude - mockDriverLocation!.longitude;
-          final double angle = atan2(deltaLng, deltaLat);
+  //         // Calculate the direction (bearing) towards the current target
+  //         final double deltaLat =
+  //             targetLocation.latitude - mockDriverLocation!.latitude;
+  //         final double deltaLng =
+  //             targetLocation.longitude - mockDriverLocation!.longitude;
+  //         final double angle = atan2(deltaLng, deltaLat);
 
-          // Update mock location towards the current target
-          final double nextLat =
-              mockDriverLocation!.latitude + stepSize * cos(angle);
-          final double nextLng =
-              mockDriverLocation!.longitude + stepSize * sin(angle);
+  //         // Update mock location towards the current target
+  //         final double nextLat =
+  //             mockDriverLocation!.latitude + stepSize * cos(angle);
+  //         final double nextLng =
+  //             mockDriverLocation!.longitude + stepSize * sin(angle);
 
-          mockDriverLocation = LatLng(nextLat, nextLng);
+  //         mockDriverLocation = LatLng(nextLat, nextLng);
 
-          // Check if the driver has reached the target
-          if ((deltaLat.abs() < stepSize) && (deltaLng.abs() < stepSize)) {
-            if (headingToMerchant) {
-              print('Driver has reached the merchant location.');
-              headingToMerchant = false; // Switch to heading to the customer
-            } else {
-              print('Driver has reached the customer location.');
-              timer
-                  .cancel(); // Stop the timer if the final destination is reached
-            }
-          }
-        }
+  //         // Check if the driver has reached the target
+  //         if ((deltaLat.abs() < stepSize) && (deltaLng.abs() < stepSize)) {
+  //           if (headingToMerchant) {
+  //             print('Driver has reached the merchant location.');
+  //             headingToMerchant = false; // Switch to heading to the customer
+  //           } else {
+  //             print('Driver has reached the customer location.');
+  //             timer
+  //                 .cancel(); // Stop the timer if the final destination is reached
+  //           }
+  //         }
+  //       }
 
-        // Emit the driver's location via socket
-        String driverId = _userId!;
-        String customerId = orderDetails['customer_id'];
-        if (driverId != null && mockDriverLocation != null) {
-          socketService.emitDriverLocation(
-              driverId,
-              mockDriverLocation!.latitude,
-              mockDriverLocation!.longitude,
-              customerId);
-          print(
-              'Driver location emitted: {driverId: $driverId, lat: ${mockDriverLocation!.latitude}, lng: ${mockDriverLocation!.longitude},customer:${customerId}}');
-        }
+  //       // Emit the driver's location via socket
+  //       String driverId = _userId!;
+  //       String customerId = orderDetails['customer_id'];
+  //       if (driverId != null && mockDriverLocation != null) {
+  //         socketService.emitDriverLocation(
+  //             driverId,
+  //             mockDriverLocation!.latitude,
+  //             mockDriverLocation!.longitude,
+  //             customerId);
+  //         print(
+  //             'Driver location emitted: {driverId: $driverId, lat: ${mockDriverLocation!.latitude}, lng: ${mockDriverLocation!.longitude},customer:${customerId}}');
+  //       }
+
+  //       // Update the map marker and UI
+  //       setState(() {
+  //         currentLocation = {
+  //           'latitude': mockDriverLocation!.latitude,
+  //           'longitude': mockDriverLocation!.longitude
+  //         };
+  //       });
+  //     } catch (e) {
+  //       print('Error updating location: $e');
+  //     }
+  //   });
+  // }
+
+  void _startLocationUpdates(Map<String, dynamic> orderDetails) async {
+  final socketService = Provider.of<SocketService>(context, listen: false);
+
+  // Timer for periodic location updates
+  locationUpdateTimer = Timer.periodic(Duration(seconds: 5), (timer) async {
+    try {
+      // Get the current driver location
+      final location = await _getCurrentLocation();
+      if (location != null) {
+        final LatLng currentDriverLocation =
+            LatLng(location['latitude']!, location['longitude']!);
+
+        // Emit the driver's current location via WebSocket
+        final String driverId = _userId!;
+        final String customerId = orderDetails['customer_id'];
+
+        socketService.emitDriverLocation(
+          driverId,
+          currentDriverLocation.latitude,
+          currentDriverLocation.longitude,
+          customerId,
+        );
+
+        print(
+            'Driver location emitted: {driverId: $driverId, lat: ${currentDriverLocation.latitude}, lng: ${currentDriverLocation.longitude}, customer: $customerId}');
 
         // Update the map marker and UI
         setState(() {
           currentLocation = {
-            'latitude': mockDriverLocation!.latitude,
-            'longitude': mockDriverLocation!.longitude
+            'latitude': currentDriverLocation.latitude,
+            'longitude': currentDriverLocation.longitude,
           };
         });
-      } catch (e) {
-        print('Error updating location: $e');
+      } else {
+        print('Failed to fetch the driver\'s current location.');
       }
-    });
-  }
+    } catch (e) {
+      print('Error updating location: $e');
+    }
+  });
+}
 
   void _fetchAddress() {
     if (orderDetails != null) {
@@ -266,7 +308,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
 
         Navigator.pushReplacementNamed(context, '/dashboard');
       } else if (selectedStatus == 'canceled') {
-        await orderApi.markOrderCompleted(widget.orderId);
+        await orderApi.markOrderCanceled(widget.orderId);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Order has been cancelled')),
         );
