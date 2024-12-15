@@ -46,11 +46,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
     fetchSavedOrder();
 
-     if (_userId != null) {
+    if (_userId != null) {
+      final socketService = Provider.of<SocketService>(context, listen: false);
       socketService.connect(_userId!);
 
       // Set up order assignment callback
-      socketService.orderAssignmentCallback = (String orderId, String message, List<String> responseOptions) {
+      socketService.orderAssignmentCallback =
+          (String orderId, String message, List<String> responseOptions) {
         // Check if the widget is still mounted before trying to show the dialog
         if (mounted) {
           _showOrderDialog(context, orderId, message, responseOptions);
@@ -68,7 +70,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final long = _savedOrder?['from_location']['coordinates'][0];
       final locationProvider =
           Provider.of<LocationProvider>(context, listen: false);
-
       locationProvider.fetchHumanReadableAddress(lat, long).then((_) {
         setState(() {
           address = locationProvider.address;
@@ -92,23 +93,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
         setState(() {
           _savedOrder = null;
         });
-
-        print('>>>>${_savedOrder}');
         return;
       }
+      if (!mounted) return;
       final merchantDetails =
           await orderApi.fetchMerchantDetails(orderDetails['merchant_id']);
       setState(() {
         _savedOrder = orderDetails;
         _savedMerchant = merchantDetails['data'];
+        isToggleActive = true;
       });
+      _handleToggle(isToggleActive);
       _fetchAddress();
     }
   }
 
   @override
   void dispose() {
-    Provider.of<SocketService>(context, listen: false).disconnect();
+    socketService.disconnect();
     _timer?.cancel();
     super.dispose();
   }
@@ -190,10 +192,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void _showOrderDialog(BuildContext parentContext, String orderId,
       String message, List<String> responseOptions) {
+         _handleToggle(isToggleActive);
+    if (!mounted) return;
     if (!Navigator.of(parentContext).canPop()) {
-    // If the context is no longer valid, don't show the dialog
-    return;
-  }
+      // If the context is no longer valid, don't show the dialog
+      return;
+    }
     showDialog(
       barrierDismissible: false,
       context: parentContext,
@@ -214,7 +218,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       await orderApi.fetchOrderDetails(orderId);
                   final merchantDetails = await orderApi
                       .fetchMerchantDetails(orderDetails['merchant_id']);
-                  _handleToggle(!isToggleActive);
+
                   setState(() {
                     _savedOrder = orderDetails;
                     _savedMerchant = merchantDetails['data'];
@@ -432,6 +436,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
             ),
+            if(_savedOrder == null)
+
+     
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
             child: Align(

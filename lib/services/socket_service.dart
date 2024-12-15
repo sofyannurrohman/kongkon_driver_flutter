@@ -125,6 +125,7 @@ class SocketService extends ChangeNotifier {
       },
     );
 
+    print(response);
     // Update state
     _driverStatus = response == 'accepted' ? 'On Duty' : 'Available';
     _currentOrderId = null; // Clear the current order ID
@@ -188,12 +189,15 @@ class SocketService extends ChangeNotifier {
     _socket?.disconnect();
     print('Socket disconnected');
   }
-  void emitDriverLocation(String driverId, double lat, double lng) {
+
+  void emitDriverLocation(String driverId, double lat, double lng,String customerId) {
     socket?.emit('updateDriverLocation', {
       'driverId': driverId,
       'lat': lat,
       'lng': lng,
+      'customerId': customerId
     });
-    print('Driver location emitted: {driverId: $driverId, lat: $lat, lng: $lng}');
+    print(
+        'Driver location emitted: {driverId: $driverId, lat: $lat, lng: $lng}');
   }
 }

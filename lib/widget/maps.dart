@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:kongkon_app_driver/shared/theme.dart';
 import 'package:latlong2/latlong.dart';
 
 class MapContainer extends StatelessWidget {
@@ -27,7 +28,6 @@ class MapContainer extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: FlutterMap(
-
         options: MapOptions(
           initialCenter: merchantLocation!, // Fallback to default location
           minZoom: 14.0,
@@ -60,7 +60,7 @@ class MapContainer extends StatelessWidget {
           point: merchantLocation!,
           width: 30.0,
           height: 30.0,
-          child: Icon(Icons.store, color: Colors.red, size: 30),
+          child: Icon(Icons.store, color: kRedColor, size: 20),
         ),
       );
     }
@@ -72,7 +72,8 @@ class MapContainer extends StatelessWidget {
           point: customerLocation!,
           width: 30.0,
           height: 30.0,
-          child: Icon(Icons.person_pin_circle, color: Colors.blue, size: 30),
+          child:
+              Icon(Icons.person_pin_circle_rounded, color: kRedColor, size: 20),
         ),
       );
     }
@@ -84,7 +85,7 @@ class MapContainer extends StatelessWidget {
           point: driverPosition,
           width: 30.0,
           height: 30.0,
-          child: Icon(Icons.directions_car, color: Colors.green, size: 30),
+          child: Icon(Icons.motorcycle, color: kPrimaryColor, size: 20),
         ),
       );
     }
@@ -103,7 +104,7 @@ class MapContainer extends StatelessWidget {
             driverPosition,
             merchantLocation!,
           ],
-          color: Colors.red,
+          color: kPolylineColor,
           strokeWidth: 4.0,
         ),
       );
@@ -117,7 +118,7 @@ class MapContainer extends StatelessWidget {
             merchantLocation!,
             customerLocation!,
           ],
-          color: Colors.blue,
+          color: kPolylineColor,
           strokeWidth: 4.0,
         ),
       );

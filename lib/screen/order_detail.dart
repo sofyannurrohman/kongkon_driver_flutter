@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:kongkon_app_driver/api/auth_provider.dart';
 // import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:kongkon_app_driver/api/order_api.dart';
 import 'package:kongkon_app_driver/services/geocoding_service.dart';
@@ -28,16 +29,23 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   bool isLoading = true;
   String errorMessage = '';
   // late GoogleMapController _mapController;
-  String? selectedStatus = 'Pending';
+  String? selectedStatus;
   bool isUpdatingLocation = false;
   Timer? locationUpdateTimer;
   final Order orderApi = Order();
   String? merchant_address;
   String? customer_address;
-
+  String? _userId;
   @override
   void initState() {
     super.initState();
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    authProvider.loadUserData();
+
+    setState(() {
+      _userId = authProvider.userData?['id'];
+    });
+    print(_userId);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       fetchOrderDetails();
     });
@@ -59,6 +67,13 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
             orderResponse; // Store the full order details in the state
         isLoading = false;
       });
+      // Ensure the selectedStatus is set to 'Menuju Merchant' before updating the order status
+      setState(() {
+        selectedStatus = 'Menuju merchant';
+      });
+
+      // Update the order status
+      await orderApi.updateStatus(widget.orderId, selectedStatus!);
 
       // Extract the user_id and merchant_id from the order
       final String? userId = orderDetails?['customer_id'];
@@ -88,7 +103,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         customerLocation = LatLng(toCoordinates[1], toCoordinates[0]);
       });
 
-      _startLocationUpdates(merchantLocation!, customerLocation!);
+      _startLocationUpdates(merchantLocation!, customerLocation!, orderDetails);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _fetchAddress();
       });
@@ -134,7 +149,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   }
 
   void _startLocationUpdates(
-      LatLng merchantLocation, LatLng customerLocation) async {
+      LatLng merchantLocation, LatLng customerLocation, orderDetails) async {
     final socketService = Provider.of<SocketService>(context, listen: false);
     LatLng? mockDriverLocation; // To track the driver's mock location
     const double stepSize = 0.001; // Adjust step size for movement
@@ -181,15 +196,16 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         }
 
         // Emit the driver's location via socket
-        String? driverId = orderDetails?['partner_id'];
+        String driverId = _userId!;
+        String customerId = orderDetails['customer_id'];
         if (driverId != null && mockDriverLocation != null) {
           socketService.emitDriverLocation(
-            driverId,
-            mockDriverLocation!.latitude,
-            mockDriverLocation!.longitude,
-          );
+              driverId,
+              mockDriverLocation!.latitude,
+              mockDriverLocation!.longitude,
+              customerId);
           print(
-              'Driver location emitted: {driverId: $driverId, lat: ${mockDriverLocation!.latitude}, lng: ${mockDriverLocation!.longitude}}');
+              'Driver location emitted: {driverId: $driverId, lat: ${mockDriverLocation!.latitude}, lng: ${mockDriverLocation!.longitude},customer:${customerId}}');
         }
 
         // Update the map marker and UI
@@ -250,7 +266,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
 
         Navigator.pushReplacementNamed(context, '/dashboard');
       } else if (selectedStatus == 'canceled') {
-         await orderApi.markOrderCompleted(widget.orderId);
+        await orderApi.markOrderCompleted(widget.orderId);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Order has been cancelled')),
         );
@@ -290,7 +306,6 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                       merchantDetails == null)
                   ? const Center(child: CircularProgressIndicator())
                   : Column(
-                    
                       children: [
                         MapContainer(
                             merchantLocation: merchantLocation!,
@@ -411,10 +426,6 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                                   });
                                 },
                                 items: [
-                                  DropdownMenuItem(
-                                    value: 'Pending',
-                                    child: Text('Pending'),
-                                  ),
                                   DropdownMenuItem(
                                     value: 'Menuju merchant',
                                     child: Text('Menuju merchant'),
