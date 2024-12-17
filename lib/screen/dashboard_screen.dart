@@ -23,7 +23,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool isToggleActive = false;
   Timer? _timer;
   String endpoint =
-      "https://b0be-116-12-47-61.ngrok-free.app/api/v1/partner/location/";
+      "http://192.168.18.25:3333/api/v1/partner/location/";
   final SocketService socketService = SocketService();
   String? _userId;
   Map<String, dynamic>? _savedOrder;
@@ -296,7 +296,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               null &&
                           authProvider.userData?['avatar_file_name'] != '')
                       ? NetworkImage(
-                          'https://b0be-116-12-47-61.ngrok-free.app/uploads/avatars/${authProvider.userData?['avatar_file_name']}')
+                          'http://192.168.18.25:3333/uploads/avatars/${authProvider.userData?['avatar_file_name']}')
                       : null, // No image, so don't set a background image
                   backgroundColor: (authProvider
                                   .userData?['avatar_file_name'] ==

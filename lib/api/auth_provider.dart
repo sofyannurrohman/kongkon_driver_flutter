@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthProvider with ChangeNotifier {
-  final String _baseUrl = "https://b0be-116-12-47-61.ngrok-free.app/api/v1";
+  final String _baseUrl = "http://192.168.18.25:3333/api/v1";
   final FlutterSecureStorage _storage = FlutterSecureStorage();
 
   String? _userId;

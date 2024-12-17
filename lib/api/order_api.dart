@@ -8,7 +8,7 @@ class Order {
   Future<Map<String, dynamic>> fetchOrderDetails(String orderId) async {
     try {
       final response = await http
-          .get(Uri.parse('https://b0be-116-12-47-61.ngrok-free.app/api/v1/orders/$orderId'));
+          .get(Uri.parse('http://192.168.18.25:3333/api/v1/orders/$orderId'));
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
@@ -39,7 +39,7 @@ class Order {
   Future<Map<String, dynamic>> fetchUserDetails(String userId) async {
     try {
       final response = await http
-          .get(Uri.parse('https://b0be-116-12-47-61.ngrok-free.app/api/v1/users/$userId'));
+          .get(Uri.parse('http://192.168.18.25:3333/api/v1/users/$userId'));
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
@@ -55,7 +55,7 @@ class Order {
   Future<Map<String, dynamic>> fetchMerchantDetails(String merchantId) async {
     try {
       final response = await http
-          .get(Uri.parse('https://b0be-116-12-47-61.ngrok-free.app/api/v1/merchants/$merchantId'));
+          .get(Uri.parse('http://192.168.18.25:3333/api/v1/merchants/$merchantId'));
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
@@ -71,7 +71,7 @@ class Order {
   Future<void> updateStatus(String orderId, String status) async {
     try {
       final response = await http.post(
-        Uri.parse('https://b0be-116-12-47-61.ngrok-free.app/api/v1/partner/update-status'),
+        Uri.parse('http://192.168.18.25:3333/api/v1/partner/update-status'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'orderId': int.parse(orderId),
@@ -90,7 +90,7 @@ class Order {
   }
 Future<void> markOrderCompleted(String orderId) async {
   final response = await http.post(
-    Uri.parse('https://b0be-116-12-47-61.ngrok-free.app/api/v1/orders/$orderId/completed'),
+    Uri.parse('http://192.168.18.25:3333/api/v1/orders/$orderId/completed'),
     headers: {'Content-Type': 'application/json'},
   );
 
@@ -103,7 +103,7 @@ Future<void> markOrderCompleted(String orderId) async {
 }
 Future<void> markOrderCanceled(String orderId) async {
   final response = await http.post(
-    Uri.parse('https://b0be-116-12-47-61.ngrok-free.app/api/v1/orders/$orderId/cancel'),
+    Uri.parse('http://192.168.18.25:3333/api/v1/orders/$orderId/cancel'),
     headers: {'Content-Type': 'application/json'},
   );
 

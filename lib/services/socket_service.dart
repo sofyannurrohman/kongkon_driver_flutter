@@ -28,7 +28,7 @@ class SocketService extends ChangeNotifier {
 
     if (_socket == null) {
       // Set up socket connection options
-      _socket = IO.io('https://b0be-116-12-47-61.ngrok-free.app', <String, dynamic>{
+      _socket = IO.io('http://192.168.18.25:3333', <String, dynamic>{
         'transports': ['websocket'],
         'autoConnect': false,
         'query': {'userId': userId}, // Send userId as query param
@@ -191,8 +191,9 @@ class SocketService extends ChangeNotifier {
     print('Socket disconnected');
   }
 
-  void emitDriverLocation(String driverId, double lat, double lng,String customerId) {
+  void emitDriverLocation(int orderId,String driverId, double lat, double lng,String customerId) {
     socket?.emit('updateDriverLocation', {
+      'orderId': orderId,
       'driverId': driverId,
       'lat': lat,
       'lng': lng,

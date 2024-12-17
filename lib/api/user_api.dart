@@ -6,7 +6,7 @@ class User {
   Future<Map<String, dynamic>> registerUser(data) async {
     try {
       final response = await http
-          .post(Uri.parse('https://b0be-116-12-47-61.ngrok-free.app/api/v1/register'));
+          .post(Uri.parse('http://192.168.18.25:3333/api/v1/register'));
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);

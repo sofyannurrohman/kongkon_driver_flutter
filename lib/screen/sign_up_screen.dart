@@ -18,7 +18,7 @@ final _phoneController = TextEditingController();
 
 class _SignUpScreenState extends State<SignUpScreen> {
   Future<void> register() async {
-    final url = Uri.parse('https://b0be-116-12-47-61.ngrok-free.app/api/v1/users/drivers');
+    final url = Uri.parse('http://192.168.18.25:3333/api/v1/users/drivers');
 
     final response = await http.post(
       url,

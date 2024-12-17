@@ -236,8 +236,9 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         // Emit the driver's current location via WebSocket
         final String driverId = _userId!;
         final String customerId = orderDetails['customer_id'];
-
+        final int currentOrder = orderDetails['id'];
         socketService.emitDriverLocation(
+          currentOrder,
           driverId,
           currentDriverLocation.latitude,
           currentDriverLocation.longitude,
@@ -245,7 +246,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         );
 
         print(
-            'Driver location emitted: {driverId: $driverId, lat: ${currentDriverLocation.latitude}, lng: ${currentDriverLocation.longitude}, customer: $customerId}');
+            'Driver location emitted: {driverId: $driverId, lat: ${currentDriverLocation.latitude}, lng: ${currentDriverLocation.longitude}, customer: $currentOrder}');
 
         // Update the map marker and UI
         setState(() {
